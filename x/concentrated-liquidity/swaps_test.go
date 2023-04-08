@@ -2004,7 +2004,6 @@ func (s *KeeperTestSuite) TestSwapExactAmountIn() {
 				tokenIn:           sdk.NewCoin(USDC, sdk.NewInt(42000000)),
 				tokenOutDenom:     ETH,
 				tokenOutMinAmount: types.MinSpotPrice.RoundInt(),
-				expectedTokenOut:  sdk.NewInt(8396),
 				underFundBy:       sdk.OneInt(),
 			},
 			expectedErr: &types.InsufficientUserBalanceError{},

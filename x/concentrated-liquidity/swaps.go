@@ -162,6 +162,7 @@ func (k Keeper) swapOutAmtGivenIn(
 	if err != nil {
 		return sdk.Coin{}, sdk.Coin{}, sdk.Int{}, sdk.Dec{}, sdk.Dec{}, err
 	}
+	fmt.Println("tokenIn: ", tokenIn)
 
 	if !tokenOut.Amount.IsPositive() {
 		return sdk.Coin{}, sdk.Coin{}, sdk.Int{}, sdk.Dec{}, sdk.Dec{}, types.InvalidAmountCalculatedError{Amount: tokenOut.Amount}

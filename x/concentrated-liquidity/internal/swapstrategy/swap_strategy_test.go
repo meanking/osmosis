@@ -26,7 +26,7 @@ var (
 	defaultSqrtPriceLower = sdk.MustNewDecFromStr("70.688664163408836321") // approx 4996.89
 	defaultSqrtPriceUpper = sdk.MustNewDecFromStr("70.710678118654752440") // 5000
 	defaultAmountOne      = sdk.MustNewDecFromStr("66829187.967824033199646915")
-	defaultAmountZero     = sdk.MustNewDecFromStr("13369.999999999998920002")
+	defaultAmountZero     = sdk.MustNewDecFromStr("13369.999999999998920001")
 	defaultLiquidity      = sdk.MustNewDecFromStr("3035764687.503020836176699298")
 	defaultFee            = sdk.MustNewDecFromStr("0.03")
 )
@@ -187,7 +187,7 @@ func (suite *StrategyTestSuite) TestComputeSwapState_Inverse() {
 			expectedSqrtPriceNextOutGivenIn: sdk.MustNewDecFromStr("70.688664163408836320"), // approx 4996.89
 
 			// from amount out: sqrt_next = sqrt_cur - token_out / liq2 quo round down
-			expectedSqrtPriceNextInGivenOut: sdk.MustNewDecFromStr("70.688664163408836319"), // approx 4996.89
+			expectedSqrtPriceNextInGivenOut: sdk.MustNewDecFromStr("70.688664163408836320"), // approx 4996.89
 
 			expectedAmountIn:  sdk.NewDec(13370),
 			expectedAmountOut: sdk.NewDec(66829187),

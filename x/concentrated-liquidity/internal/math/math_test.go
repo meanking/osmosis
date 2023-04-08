@@ -158,13 +158,39 @@ func (suite *ConcentratedMathTestSuite) TestCalcAmount0Delta() {
 		liquidity       sdk.Dec
 		sqrtPCurrent    sdk.Dec
 		sqrtPUpper      sdk.Dec
+		round           bool
 		amount0Expected string
 	}{
-		"happy path": {
-			liquidity:       sdk.MustNewDecFromStr("1517882343.751510418088349649"), // we use the smaller liquidity between liq0 and liq1
-			sqrtPCurrent:    sdk.MustNewDecFromStr("70.710678118654752440"),         // 5000
-			sqrtPUpper:      sdk.MustNewDecFromStr("74.161984870956629487"),         // 5500
-			amount0Expected: "998976.618347426388356620",
+		"rounding check high end, round up false": {
+			liquidity:       sdk.MustNewDecFromStr("1517882923.648669463891383569"),
+			sqrtPCurrent:    sdk.MustNewDecFromStr("70.710678118654752440"),
+			sqrtPUpper:      sdk.MustNewDecFromStr("74.161984870956629486"),
+			round:           false,
+			amount0Expected: "998976.999999999999999853", // calculation is 998976.999999999999999999, so has rounded down by .000000000000000146
+			// https://www.wolframalpha.com/input?i=%281517882923.648669463891383569+*+%2874.161984870956629486+-+70.710678118654752440+%29%29+%2F+%2870.710678118654752440+*+74.161984870956629486%29
+		},
+		"rounding check high end, round up true": {
+			liquidity:       sdk.MustNewDecFromStr("1517882923.648669463891383569"),
+			sqrtPCurrent:    sdk.MustNewDecFromStr("70.710678118654752440"),
+			sqrtPUpper:      sdk.MustNewDecFromStr("74.161984870956629486"),
+			round:           true,
+			amount0Expected: "998977.000000000000000043", // calculation is 998976.999999999999999999, so has rounded up by .000000000000000044
+			// https://www.wolframalpha.com/input?i=%281517882343.751510418088349649+*+%2874.161984870956629487+-+70.710678118654752440+%29%29+%2F+%2870.710678118654752440+*+74.161984870956629487%29
+		},
+		"rounding check low end, round up false": {
+			liquidity:       sdk.MustNewDecFromStr("1517881404.211361449122814467"),
+			sqrtPCurrent:    sdk.MustNewDecFromStr("70.710678118654752440"),
+			sqrtPUpper:      sdk.MustNewDecFromStr("74.161984870956629486"),
+			round:           false,
+			amount0Expected: "998975.999999999999999855", // calculation is 998976.000000000000000001, so has rounded down by .000000000000000146
+			// https://www.wolframalpha.com/input?i=%281517882923.648669463891383569+*+%2874.161984870956629486+-+70.710678118654752440+%29%29+%2F+%2870.710678118654752440+*+74.161984870956629486%29
+		},
+		"rounding check low end, round up true": {
+			liquidity:       sdk.MustNewDecFromStr("1517881404.211361449122814467"),
+			sqrtPCurrent:    sdk.MustNewDecFromStr("70.710678118654752440"),
+			sqrtPUpper:      sdk.MustNewDecFromStr("74.161984870956629486"),
+			round:           true,
+			amount0Expected: "998976.000000000000000045", // calculation is 998976.000000000000000001, so has rounded up by .000000000000000044
 			// https://www.wolframalpha.com/input?i=%281517882343.751510418088349649+*+%2874.161984870956629487+-+70.710678118654752440+%29%29+%2F+%2870.710678118654752440+*+74.161984870956629487%29
 		},
 	}
@@ -173,7 +199,7 @@ func (suite *ConcentratedMathTestSuite) TestCalcAmount0Delta() {
 		tc := tc
 
 		suite.Run(name, func() {
-			amount0 := math.CalcAmount0Delta(tc.liquidity, tc.sqrtPCurrent, tc.sqrtPUpper, false)
+			amount0 := math.CalcAmount0Delta(tc.liquidity, tc.sqrtPCurrent, tc.sqrtPUpper, tc.round)
 			suite.Require().Equal(tc.amount0Expected, amount0.String())
 		})
 	}
@@ -188,14 +214,40 @@ func (suite *ConcentratedMathTestSuite) TestCalcAmount1Delta() {
 		liquidity       sdk.Dec
 		sqrtPCurrent    sdk.Dec
 		sqrtPLower      sdk.Dec
+		round           bool
 		amount1Expected string
 	}{
-		"happy path": {
-			liquidity:       sdk.MustNewDecFromStr("1517882343.751510418088349649"), // we use the smaller liquidity between liq0 and liq1
-			sqrtPCurrent:    sdk.MustNewDecFromStr("70.710678118654752440"),         // 5000
-			sqrtPLower:      sdk.MustNewDecFromStr("67.416615162732695594"),         // 4545
-			amount1Expected: "5000000000.000000000000000000",
+		"rounding check high end, round up false": {
+			liquidity:       sdk.MustNewDecFromStr("1517882343.751510418088349649"),
+			sqrtPCurrent:    sdk.MustNewDecFromStr("70.710678118654752440"),
+			sqrtPLower:      sdk.MustNewDecFromStr("67.416615162732695594"),
+			round:           false,
+			amount1Expected: "4999999999.999999999999999999", // calculation is 4999999999.99999999999999999, so has rounded down by 0
 			// https://www.wolframalpha.com/input?i=1517882343.751510418088349649+*+%2870.710678118654752440+-+67.416615162732695594%29
+		},
+		"rounding check high end, round up true": {
+			liquidity:       sdk.MustNewDecFromStr("1517882343.751510418088349649"),
+			sqrtPCurrent:    sdk.MustNewDecFromStr("70.710678118654752440"),
+			sqrtPLower:      sdk.MustNewDecFromStr("67.416615162732695594"),
+			round:           true,
+			amount1Expected: "5000000000.000000000000000000", // calculation is 4999999999.99999999999999999, so has rounded up by .000000000000000001
+			// https://www.wolframalpha.com/input?i=1517882343.751510418088349649+*+%2870.710678118654752440+-+67.416615162732695594%29
+		},
+		"rounding check low end, round up false": {
+			liquidity:       sdk.MustNewDecFromStr("1517882343.751510418088349650"),
+			sqrtPCurrent:    sdk.MustNewDecFromStr("70.710678118654752440"),
+			sqrtPLower:      sdk.MustNewDecFromStr("67.416615162732695594"),
+			round:           false,
+			amount1Expected: "5000000000.000000000000000002", // calculation is 5000000000.000000000000000002, so has rounded down by 0
+			// https://www.wolframalpha.com/input?i=1517882343.751510418088349650+*+%2870.710678118654752440+-+67.416615162732695594%29
+		},
+		"rounding check low end, round up true": {
+			liquidity:       sdk.MustNewDecFromStr("1517882343.751510418088349650"),
+			sqrtPCurrent:    sdk.MustNewDecFromStr("70.710678118654752440"),
+			sqrtPLower:      sdk.MustNewDecFromStr("67.416615162732695594"),
+			round:           true,
+			amount1Expected: "5000000000.000000000000000003", // calculation is 5000000000.000000000000000002, so has rounded up by .000000000000000001
+			// https://www.wolframalpha.com/input?i=1517882343.751510418088349650+*+%2870.710678118654752440+-+67.416615162732695594%29
 		},
 	}
 
@@ -203,7 +255,7 @@ func (suite *ConcentratedMathTestSuite) TestCalcAmount1Delta() {
 		tc := tc
 
 		suite.Run(name, func() {
-			amount1 := math.CalcAmount1Delta(tc.liquidity, tc.sqrtPCurrent, tc.sqrtPLower, false)
+			amount1 := math.CalcAmount1Delta(tc.liquidity, tc.sqrtPCurrent, tc.sqrtPLower, tc.round)
 			suite.Require().Equal(tc.amount1Expected, amount1.String())
 		})
 	}

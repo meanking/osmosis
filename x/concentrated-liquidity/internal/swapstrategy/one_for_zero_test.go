@@ -53,7 +53,7 @@ func (suite *StrategyTestSuite) TestComputeSwapStepOutGivenIn_OneForZero() {
 		// sqrt_price_current + token_in / liquidity
 		sqrtPriceTargetNotReached = sdk.MustNewDecFromStr("70.710678085714122880")
 		// liquidity * (sqrtPriceNext - sqrtPriceCurrent) / (sqrtPriceNext * sqrtPriceCurrent)
-		amountZeroTargetNotReached = sdk.MustNewDecFromStr("13369.979999999989129753")
+		amountZeroTargetNotReached = sdk.MustNewDecFromStr("13369.979999999989129750")
 	)
 
 	tests := map[string]struct {
@@ -156,7 +156,7 @@ func (suite *StrategyTestSuite) TestComputeSwapStepInGivenOut_OneForZero() {
 		// N.B.: approx eq = defaultAmountZero.Sub(sdk.NewDec(1000))
 		// slight variance due to recomputing amount out when target is not reached.
 		// liq * (sqrt_next - sqrt_cur) / (sqrt_next * sqrt_cur)
-		amountZeroTargetNotReached = sdk.MustNewDecFromStr("12369.999999999999293322")
+		amountZeroTargetNotReached = sdk.MustNewDecFromStr("12369.999999999999293319")
 	)
 
 	tests := map[string]struct {

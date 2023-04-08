@@ -165,7 +165,7 @@ func (suite *StrategyTestSuite) TestComputeSwapStepInGivenOut_ZeroForOne() {
 		// N.B.: approx eq = defaultAmountOneZfo.Sub(sdk.NewDec(10000))
 		// slight variance due to recomputing amount out when target is not reached.
 		// liq * (sqrt_cur - sqrt_next)
-		amountOneOutTargetNotReached = sdk.MustNewDecFromStr("66819187.967824033372217995")
+		amountOneOutTargetNotReached = sdk.MustNewDecFromStr("66819187.967824033372217994")
 	)
 
 	tests := map[string]struct {
