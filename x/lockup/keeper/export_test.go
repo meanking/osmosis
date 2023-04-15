@@ -25,3 +25,19 @@ func (k Keeper) GetCoinsFromLocks(locks []types.PeriodLock) sdk.Coins {
 func (k Keeper) Lock(ctx sdk.Context, lock types.PeriodLock, tokensToLock sdk.Coins) error {
 	return k.lock(ctx, lock, tokensToLock)
 }
+
+func DurationLockRefKeys(lock types.PeriodLock) ([][]byte, error) {
+	return durationLockRefKeys(lock)
+}
+
+func LockRefKeys(lock types.PeriodLock) ([][]byte, error) {
+	return lockRefKeys(lock)
+}
+
+func CombineKeys(keys ...[]byte) []byte {
+	return combineKeys(keys...)
+}
+
+func UnlockingPrefix(unlocking bool) []byte {
+	return unlockingPrefix(unlocking)
+}
