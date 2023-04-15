@@ -123,11 +123,6 @@ func (suite *KeeperTestSuite) TestRebondTokens() {
 				// Original lock should have "locked" refs
 				suite.assertLockRefs(*lock)
 			}
-
-				// Check lock refs
-				// Original lock should have "locked" refs
-				suite.assertLockRefs(*lock)
-			}
 		})
 	}
 }
