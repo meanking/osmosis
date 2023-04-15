@@ -8,7 +8,6 @@ import (
 	"github.com/osmosis-labs/osmosis/osmoutils/accum"
 	"github.com/osmosis-labs/osmosis/v15/x/concentrated-liquidity/model"
 	"github.com/osmosis-labs/osmosis/v15/x/concentrated-liquidity/types"
-	cltypes "github.com/osmosis-labs/osmosis/v15/x/concentrated-liquidity/types"
 	poolmanagertypes "github.com/osmosis-labs/osmosis/v15/x/poolmanager/types"
 )
 
@@ -17,17 +16,13 @@ const (
 )
 
 var (
-	EmptyCoins         = emptyCoins
-	HundredFooCoins    = sdk.NewDecCoin("foo", sdk.NewInt(100))
-	HundredBarCoins    = sdk.NewDecCoin("bar", sdk.NewInt(100))
-	TwoHundredFooCoins = sdk.NewDecCoin("foo", sdk.NewInt(200))
-	TwoHundredBarCoins = sdk.NewDecCoin("bar", sdk.NewInt(200))
+	EmptyCoins           = emptyCoins
+	HundredFooCoins      = sdk.NewDecCoin("foo", sdk.NewInt(100))
+	HundredBarCoins      = sdk.NewDecCoin("bar", sdk.NewInt(100))
+	TwoHundredFooCoins   = sdk.NewDecCoin("foo", sdk.NewInt(200))
+	TwoHundredBarCoins   = sdk.NewDecCoin("bar", sdk.NewInt(200))
+	FullyChargedDuration = types.SupportedUptimes[len(types.SupportedUptimes)-1]
 )
-
-// OrderInitialPoolDenoms sets the pool denoms of a cl pool
-func OrderInitialPoolDenoms(denom0, denom1 string) (string, string, error) {
-	return cltypes.OrderInitialPoolDenoms(denom0, denom1)
-}
 
 func (k Keeper) SetPool(ctx sdk.Context, pool types.ConcentratedPoolExtension) error {
 	return k.setPool(ctx, pool)
@@ -73,24 +68,20 @@ func (k *Keeper) SwapInAmtGivenOut(ctx sdk.Context, sender sdk.AccAddress, pool 
 	return k.swapInAmtGivenOut(ctx, sender, pool, desiredTokenOut, tokenInDenom, swapFee, priceLimit)
 }
 
-func (k Keeper) UpdatePosition(ctx sdk.Context, poolId uint64, owner sdk.AccAddress, lowerTick, upperTick int64, liquidityDelta sdk.Dec, joinTime time.Time, freezeDuration time.Duration, positionId uint64) (sdk.Int, sdk.Int, error) {
-	return k.updatePosition(ctx, poolId, owner, lowerTick, upperTick, liquidityDelta, joinTime, freezeDuration, positionId)
+func (k Keeper) UpdatePosition(ctx sdk.Context, poolId uint64, owner sdk.AccAddress, lowerTick, upperTick int64, liquidityDelta sdk.Dec, joinTime time.Time, positionId uint64) (sdk.Int, sdk.Int, error) {
+	return k.updatePosition(ctx, poolId, owner, lowerTick, upperTick, liquidityDelta, joinTime, positionId)
 }
 
 func (k Keeper) InitOrUpdateTick(ctx sdk.Context, poolId uint64, currentTick int64, tickIndex int64, liquidityIn sdk.Dec, upper bool) (err error) {
 	return k.initOrUpdateTick(ctx, poolId, currentTick, tickIndex, liquidityIn, upper)
 }
 
-func (k Keeper) InitOrUpdatePosition(ctx sdk.Context, poolId uint64, owner sdk.AccAddress, lowerTick, upperTick int64, liquidityDelta sdk.Dec, joinTime time.Time, freezeDuration time.Duration, positionId uint64) (err error) {
-	return k.initOrUpdatePosition(ctx, poolId, owner, lowerTick, upperTick, liquidityDelta, joinTime, freezeDuration, positionId)
+func (k Keeper) InitOrUpdatePosition(ctx sdk.Context, poolId uint64, owner sdk.AccAddress, lowerTick, upperTick int64, liquidityDelta sdk.Dec, joinTime time.Time, positionId uint64) (err error) {
+	return k.initOrUpdatePosition(ctx, poolId, owner, lowerTick, upperTick, liquidityDelta, joinTime, positionId)
 }
 
 func (k Keeper) PoolExists(ctx sdk.Context, poolId uint64) bool {
 	return k.poolExists(ctx, poolId)
-}
-
-func (k Keeper) IsInitialPositionForPool(initialSqrtPrice sdk.Dec, initialTick sdk.Int) bool {
-	return k.isInitialPositionForPool(initialSqrtPrice, initialTick)
 }
 
 func (k Keeper) InitializeInitialPositionForPool(ctx sdk.Context, pool types.ConcentratedPoolExtension, amount0Desired, amount1Desired sdk.Int) error {
@@ -113,12 +104,24 @@ func ConvertPoolInterfaceToConcentrated(poolI poolmanagertypes.PoolI) (types.Con
 	return convertPoolInterfaceToConcentrated(poolI)
 }
 
-func (k Keeper) SetPosition(ctx sdk.Context, poolId uint64, owner sdk.AccAddress, lowerTick, upperTick int64, joinTime time.Time, freezeDuration time.Duration, liquidity sdk.Dec, positionId uint64) {
-	k.setPosition(ctx, poolId, owner, lowerTick, upperTick, joinTime, freezeDuration, liquidity, positionId)
-}
-
 func (k Keeper) ValidateSwapFee(ctx sdk.Context, params types.Params, swapFee sdk.Dec) bool {
 	return k.validateSwapFee(ctx, params, swapFee)
+}
+
+func (k Keeper) FungifyChargedPosition(ctx sdk.Context, owner sdk.AccAddress, positionIds []uint64) (uint64, error) {
+	return k.fungifyChargedPosition(ctx, owner, positionIds)
+}
+
+func (k Keeper) ValidatePositionsAndGetTotalLiquidity(ctx sdk.Context, owner sdk.AccAddress, positionIds []uint64) (uint64, int64, int64, sdk.Dec, error) {
+	return k.validatePositionsAndGetTotalLiquidity(ctx, owner, positionIds)
+}
+
+func (k Keeper) IsLockMature(ctx sdk.Context, underlyingLockId uint64) (bool, error) {
+	return k.isLockMature(ctx, underlyingLockId)
+}
+
+func (k Keeper) PositionHasUnderlyingLockInState(ctx sdk.Context, positionId uint64) (bool, error) {
+	return k.positionHasUnderlyingLockInState(ctx, positionId)
 }
 
 // fees methods
@@ -150,10 +153,6 @@ func (k Keeper) GetInitialFeeGrowthOutsideForTick(ctx sdk.Context, poolId uint64
 	return k.getInitialFeeGrowthOutsideForTick(ctx, poolId, tick)
 }
 
-func GetFeeAccumulatorName(poolId uint64) string {
-	return getFeeAccumulatorName(poolId)
-}
-
 func (k Keeper) ChargeFee(ctx sdk.Context, poolId uint64, feeUpdate sdk.DecCoin) error {
 	return k.chargeFee(ctx, poolId, feeUpdate)
 }
@@ -166,8 +165,8 @@ func PreparePositionAccumulator(feeAccumulator accum.AccumulatorObject, position
 	return preparePositionAccumulator(feeAccumulator, positionKey, feeGrowthOutside)
 }
 
-func (k Keeper) CreatePosition(ctx sdk.Context, poolId uint64, owner sdk.AccAddress, amount0Desired, amount1Desired, amount0Min, amount1Min sdk.Int, lowerTick, upperTick int64, freezeDuration time.Duration) (uint64, sdk.Int, sdk.Int, sdk.Dec, time.Time, error) {
-	return k.createPosition(ctx, poolId, owner, amount0Desired, amount1Desired, amount0Min, amount1Min, lowerTick, upperTick, freezeDuration)
+func (k Keeper) CreatePosition(ctx sdk.Context, poolId uint64, owner sdk.AccAddress, amount0Desired, amount1Desired, amount0Min, amount1Min sdk.Int, lowerTick, upperTick int64) (uint64, sdk.Int, sdk.Int, sdk.Dec, time.Time, error) {
+	return k.createPosition(ctx, poolId, owner, amount0Desired, amount1Desired, amount0Min, amount1Min, lowerTick, upperTick)
 }
 
 func (k Keeper) WithdrawPosition(ctx sdk.Context, owner sdk.AccAddress, positionId uint64, requestedLiquidityAmountToWithdraw sdk.Dec) (amtDenom0, amtDenom1 sdk.Int, err error) {
@@ -200,10 +199,6 @@ func (k Keeper) GetUptimeAccumulators(ctx sdk.Context, poolId uint64) ([]accum.A
 	return k.getUptimeAccumulators(ctx, poolId)
 }
 
-func GetUptimeAccumulatorName(poolId, uptimeIndex uint64) string {
-	return getUptimeAccumulatorName(poolId, uptimeIndex)
-}
-
 func (k Keeper) GetUptimeAccumulatorValues(ctx sdk.Context, poolId uint64) ([]sdk.DecCoins, error) {
 	return k.getUptimeAccumulatorValues(ctx, poolId)
 }
@@ -228,8 +223,8 @@ func (k Keeper) GetInitialUptimeGrowthOutsidesForTick(ctx sdk.Context, poolId ui
 	return k.getInitialUptimeGrowthOutsidesForTick(ctx, poolId, tick)
 }
 
-func (k Keeper) InitOrUpdatePositionUptime(ctx sdk.Context, poolId uint64, position sdk.Dec, owner sdk.AccAddress, lowerTick, upperTick int64, liquidityDelta sdk.Dec, joinTime time.Time, freezeDuration time.Duration, positionId uint64) error {
-	return k.initOrUpdatePositionUptime(ctx, poolId, position, owner, lowerTick, upperTick, liquidityDelta, joinTime, freezeDuration, positionId)
+func (k Keeper) InitOrUpdatePositionUptime(ctx sdk.Context, poolId uint64, position sdk.Dec, owner sdk.AccAddress, lowerTick, upperTick int64, liquidityDelta sdk.Dec, joinTime time.Time, positionId uint64) error {
+	return k.initOrUpdatePositionUptime(ctx, poolId, position, owner, lowerTick, upperTick, liquidityDelta, joinTime, positionId)
 }
 
 func (k Keeper) CollectIncentives(ctx sdk.Context, owner sdk.AccAddress, positionId uint64) (sdk.Coins, error) {
@@ -240,16 +235,12 @@ func GetUptimeTrackerValues(uptimeTrackers []model.UptimeTracker) []sdk.DecCoins
 	return getUptimeTrackerValues(uptimeTrackers)
 }
 
-func (k Keeper) CreateIncentive(ctx sdk.Context, poolId uint64, sender sdk.AccAddress, incentiveDenom string, incentiveAmount sdk.Int, emissionRate sdk.Dec, startTime time.Time, minUptime time.Duration) (types.IncentiveRecord, error) {
-	return k.createIncentive(ctx, poolId, sender, incentiveDenom, incentiveAmount, emissionRate, startTime, minUptime)
-}
-
-func PrepareAccumAndClaimRewards(accum accum.AccumulatorObject, positionKey string, growthOutside sdk.DecCoins) (sdk.Coins, error) {
+func PrepareAccumAndClaimRewards(accum accum.AccumulatorObject, positionKey string, growthOutside sdk.DecCoins) (sdk.Coins, sdk.DecCoins, error) {
 	return prepareAccumAndClaimRewards(accum, positionKey, growthOutside)
 }
 
-func (k Keeper) ClaimAllIncentivesForPosition(ctx sdk.Context, positionId uint64, forfeitIncentives bool) (sdk.Coins, error) {
-	return k.claimAllIncentivesForPosition(ctx, positionId, forfeitIncentives)
+func (k Keeper) ClaimAllIncentivesForPosition(ctx sdk.Context, positionId uint64) (sdk.Coins, sdk.Coins, error) {
+	return k.claimAllIncentivesForPosition(ctx, positionId)
 }
 
 func FindUptimeIndex(uptime time.Duration) (int, error) {
@@ -262,4 +253,32 @@ func (k Keeper) GetAllPositions(ctx sdk.Context) ([]model.Position, error) {
 
 func (k Keeper) UpdatePoolForSwap(ctx sdk.Context, pool types.ConcentratedPoolExtension, sender sdk.AccAddress, tokenIn sdk.Coin, tokenOut sdk.Coin, newCurrentTick sdk.Int, newLiquidity sdk.Dec, newSqrtPrice sdk.Dec) error {
 	return k.updatePoolForSwap(ctx, pool, sender, tokenIn, tokenOut, newCurrentTick, newLiquidity, newSqrtPrice)
+}
+
+func (k Keeper) PrepareBalancerPoolAsFullRange(ctx sdk.Context, clPoolId uint64) (uint64, sdk.Dec, error) {
+	return k.prepareBalancerPoolAsFullRange(ctx, clPoolId)
+}
+
+func (k Keeper) ClaimAndResetFullRangeBalancerPool(ctx sdk.Context, clPoolId uint64, balPoolId uint64) (sdk.Coins, error) {
+	return k.claimAndResetFullRangeBalancerPool(ctx, clPoolId, balPoolId)
+}
+
+func (k Keeper) HasAnyPositionForPool(ctx sdk.Context, poolId uint64) (bool, error) {
+	return k.hasAnyPositionForPool(ctx, poolId)
+}
+
+func (k Keeper) UninitializePool(ctx sdk.Context, poolId uint64) error {
+	return k.uninitializePool(ctx, poolId)
+}
+
+// SetListenersUnsafe sets the listeners of the module. It is only meant to be used in tests.
+// As a result, it is called unsafe.
+func (k *Keeper) SetListenersUnsafe(listeners types.ConcentratedLiquidityListeners) {
+	k.listeners = listeners
+}
+
+// GetListenersUnsafe returns the listeners of the module. It is only meant to be used in tests.
+// As a result, it is called unsafe.
+func (k Keeper) GetListenersUnsafe() types.ConcentratedLiquidityListeners {
+	return k.listeners
 }

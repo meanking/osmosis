@@ -17,14 +17,6 @@ import (
 	clquery "github.com/osmosis-labs/osmosis/v15/x/concentrated-liquidity/types/query"
 )
 
-const (
-	liquidityDepthRangeQueryLimit = 10000
-)
-
-var (
-	liquidityDepthRangeQueryLimitInt = sdk.NewInt(liquidityDepthRangeQueryLimit)
-)
-
 var _ clquery.QueryServer = Querier{}
 
 // Querier defines a wrapper around the x/concentrated-liquidity keeper providing gRPC method
@@ -165,34 +157,6 @@ func (q Querier) Params(goCtx context.Context, req *clquery.QueryParamsRequest) 
 	return &clquery.QueryParamsResponse{Params: q.Keeper.GetParams(ctx)}, nil
 }
 
-// LiquidityDepthsForRange returns liquidity depths for the given range.
-func (q Querier) LiquidityDepthsForRange(goCtx context.Context, req *clquery.QueryLiquidityDepthsForRangeRequest) (*clquery.QueryLiquidityDepthsForRangeResponse, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-
-	if req == nil {
-		return nil, status.Error(codes.InvalidArgument, "empty request")
-	}
-
-	if req.LowerTick.GT(req.UpperTick) {
-		return nil, types.InvalidLowerUpperTickError{LowerTick: req.LowerTick.Int64(), UpperTick: req.UpperTick.Int64()}
-	}
-
-	requestedRange := req.UpperTick.Sub(req.LowerTick)
-	// use constant pre-defined to limit range and check if reuested range does not exceed max range
-	if requestedRange.GT(liquidityDepthRangeQueryLimitInt) {
-		return nil, types.QueryRangeUnsupportedError{RequestedRange: requestedRange, MaxRange: liquidityDepthRangeQueryLimitInt}
-	}
-
-	liquidityDepths, err := q.Keeper.GetPerTickLiquidityDepthFromRange(ctx, req.PoolId, req.LowerTick.Int64(), req.UpperTick.Int64())
-	if err != nil {
-		return nil, err
-	}
-
-	return &clquery.QueryLiquidityDepthsForRangeResponse{
-		LiquidityDepths: liquidityDepths,
-	}, nil
-}
-
 // TotalLiquidityForRange returns an array of LiquidityDepthWithRange, which contains the range(lower tick and upper tick) and the liquidity amount in the range.
 func (q Querier) TotalLiquidityForRange(goCtx context.Context, req *clquery.QueryTotalLiquidityForRangeRequest) (*clquery.QueryTotalLiquidityForRangeResponse, error) {
 	if req == nil {
@@ -200,7 +164,7 @@ func (q Querier) TotalLiquidityForRange(goCtx context.Context, req *clquery.Quer
 	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	liquidity, err := q.Keeper.GetTickLiquidityForRange(
+	liquidity, err := q.Keeper.GetTickLiquidityForFullRange(
 		ctx,
 		req.PoolId,
 	)
@@ -209,6 +173,46 @@ func (q Querier) TotalLiquidityForRange(goCtx context.Context, req *clquery.Quer
 	}
 
 	return &clquery.QueryTotalLiquidityForRangeResponse{Liquidity: liquidity}, nil
+}
+
+// LiquidityNetInDirection returns an array of LiquidityDepthWithRange, which contains the range(lower tick and upper tick) and the liquidity amount in the range.
+func (q Querier) LiquidityNetInDirection(goCtx context.Context, req *clquery.QueryLiquidityNetInDirectionRequest) (*clquery.QueryLiquidityNetInDirectionResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	if req.TokenIn == "" {
+		return nil, status.Error(codes.InvalidArgument, "tokenIn is empty")
+	}
+
+	var startTick sdk.Int
+	if !req.UseCurTick {
+		startTick = sdk.NewInt(req.StartTick)
+	}
+
+	var boundTick sdk.Int
+	if !req.UseNoBound {
+		boundTick = sdk.NewInt(req.BoundTick)
+	}
+
+	liquidityDepths, err := q.Keeper.GetTickLiquidityNetInDirection(
+		ctx,
+		req.PoolId,
+		req.TokenIn,
+		startTick,
+		boundTick,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	pool, err := q.Keeper.getPoolById(ctx, req.PoolId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &clquery.QueryLiquidityNetInDirectionResponse{LiquidityDepths: liquidityDepths, CurrentLiquidity: pool.GetLiquidity(), CurrentTick: pool.GetCurrentTick().Int64()}, nil
 }
 
 func (q Querier) ClaimableFees(ctx context.Context, req *clquery.QueryClaimableFeesRequest) (*clquery.QueryClaimableFeesResponse, error) {

@@ -2,6 +2,7 @@ package model_test
 
 import (
 	fmt "fmt"
+	math "math"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -141,25 +142,101 @@ func (s *ConcentratedPoolTestSuite) TestApplySwap() {
 	// Set up the test suite.
 	s.Setup()
 
-	// Create a concentrated liquidity pool struct instance
-	mock_pool := model.Pool{
-		CurrentTickLiquidity: DefaultLiquidityAmt,
-		CurrentTick:          DefaultCurrTick,
-		CurrentSqrtPrice:     DefaultCurrSqrtPrice,
+	negativeOne := sdk.NewDec(-1)
+	tests := []struct {
+		name             string
+		currentLiquidity sdk.Dec
+		currentTick      sdk.Int
+		currentSqrtPrice sdk.Dec
+		newLiquidity     sdk.Dec
+		newTick          sdk.Int
+		newSqrtPrice     sdk.Dec
+		expectErr        error
+	}{
+		{
+			name:             "positive liquidity and square root price",
+			currentLiquidity: DefaultLiquidityAmt,
+			currentTick:      DefaultCurrTick,
+			currentSqrtPrice: DefaultCurrSqrtPrice,
+			newLiquidity:     DefaultLiquidityAmt.Mul(sdk.NewDec(2)),
+			newTick:          DefaultCurrTick.Mul(sdk.NewInt(2)),
+			newSqrtPrice:     DefaultCurrSqrtPrice.Mul(sdk.NewDec(2)),
+			expectErr:        nil,
+		},
+		{
+			name:             "negative liquidity",
+			currentLiquidity: DefaultLiquidityAmt,
+			currentTick:      DefaultCurrTick,
+			currentSqrtPrice: DefaultCurrSqrtPrice,
+			newLiquidity:     negativeOne,
+			newTick:          DefaultCurrTick,
+			newSqrtPrice:     DefaultCurrSqrtPrice,
+			expectErr:        types.NegativeLiquidityError{Liquidity: negativeOne},
+		},
+		{
+			name:             "negative square root price",
+			currentLiquidity: DefaultLiquidityAmt,
+			currentTick:      DefaultCurrTick,
+			currentSqrtPrice: DefaultCurrSqrtPrice,
+			newLiquidity:     DefaultLiquidityAmt,
+			newTick:          DefaultCurrTick,
+			newSqrtPrice:     negativeOne,
+			expectErr:        types.SqrtPriceNegativeError{ProvidedSqrtPrice: negativeOne},
+		},
+		{
+			name:             "upper tick too big",
+			currentLiquidity: DefaultLiquidityAmt,
+			currentTick:      sdk.NewInt(1),
+			currentSqrtPrice: DefaultCurrSqrtPrice,
+			newLiquidity:     DefaultLiquidityAmt,
+			newTick:          sdk.NewInt(math.MaxInt64),
+			newSqrtPrice:     DefaultCurrSqrtPrice,
+			expectErr: types.TickIndexNotWithinBoundariesError{
+				MaxTick:  types.MaxTickNegFour,
+				MinTick:  types.MinTickNegFour,
+				WantTick: math.MaxInt64,
+			},
+		},
+		{
+			name:             "lower tick too small",
+			currentLiquidity: DefaultLiquidityAmt,
+			currentTick:      sdk.NewInt(1),
+			currentSqrtPrice: DefaultCurrSqrtPrice,
+			newLiquidity:     DefaultLiquidityAmt,
+			newTick:          sdk.NewInt(math.MinInt64),
+			newSqrtPrice:     DefaultCurrSqrtPrice,
+			expectErr: types.TickIndexNotWithinBoundariesError{
+				MaxTick:  types.MaxTickNegFour,
+				MinTick:  types.MinTickNegFour,
+				WantTick: math.MinInt64,
+			},
+		},
 	}
 
-	// Create new values for liquidity, current tick, and current square root price.
-	newLiquidity := DefaultLiquidityAmt.Mul(sdk.NewDec(2))
-	newCurrTick := DefaultCurrTick.Mul(sdk.NewInt(2))
-	newCurrSqrtPrice := DefaultCurrSqrtPrice.Mul(sdk.NewDec(2))
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			// Create a concentrated liquidity pool struct instance
+			mock_pool := model.Pool{
+				ExponentAtPriceOne:   DefaultExponentAtPriceOne,
+				CurrentTickLiquidity: tt.currentLiquidity,
+				CurrentTick:          tt.currentTick,
+				CurrentSqrtPrice:     tt.currentSqrtPrice,
+			}
 
-	// Apply the new values to the mock pool using the ApplySwap method.
-	mock_pool.ApplySwap(newLiquidity, newCurrTick, newCurrSqrtPrice)
+			// Apply the new values to the mock pool using the ApplySwap method.
+			err := mock_pool.ApplySwap(tt.newLiquidity, tt.newTick, tt.newSqrtPrice)
 
-	// Assert that the values in the mock pool have been updated.
-	s.Require().Equal(mock_pool.CurrentTickLiquidity, newLiquidity)
-	s.Require().Equal(mock_pool.CurrentTick, newCurrTick)
-	s.Require().Equal(mock_pool.CurrentSqrtPrice, newCurrSqrtPrice)
+			if tt.expectErr != nil {
+				s.Require().ErrorIs(tt.expectErr, err)
+				return
+			}
+
+			// Assert that the values in the mock pool have been updated.
+			s.Require().Equal(tt.newLiquidity, mock_pool.CurrentTickLiquidity)
+			s.Require().Equal(tt.newTick, mock_pool.CurrentTick)
+			s.Require().Equal(tt.newSqrtPrice, mock_pool.CurrentSqrtPrice)
+		})
+	}
 }
 
 // TestNewConcentratedLiquidityPool is a test suite that tests the NewConcentratedLiquidityPool function.
@@ -198,7 +275,7 @@ func (s *ConcentratedPoolTestSuite) TestNewConcentratedLiquidityPool() {
 			expectedTickSpacing: DefaultTickSpacing,
 		},
 		{
-			name: "Non lexicographical order of denoms should get reordered",
+			name: "Non lexicographical order of denoms should not get reordered",
 			param: param{
 				poolId:         DefaultValidPoolID,
 				denom0:         USDC,
@@ -208,8 +285,8 @@ func (s *ConcentratedPoolTestSuite) TestNewConcentratedLiquidityPool() {
 				swapFee:        sdk.ZeroDec(),
 			},
 			expectedPoolId:      DefaultValidPoolID,
-			expectedDenom0:      ETH,
-			expectedDenom1:      USDC,
+			expectedDenom0:      USDC,
+			expectedDenom1:      ETH,
 			expectedTickSpacing: DefaultTickSpacing,
 		},
 		{
@@ -246,7 +323,7 @@ func (s *ConcentratedPoolTestSuite) TestNewConcentratedLiquidityPool() {
 				precisionValue: DefaultExponentAtPriceOne,
 				swapFee:        DefaultSwapFee,
 			},
-			expectedErr: fmt.Errorf("cannot have the same asset in a single pool"),
+			expectedErr: types.MatchingDenomError{Denom: USDC},
 		},
 		{
 			name: "Error: negative swap fee",
